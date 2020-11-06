@@ -1,8 +1,6 @@
 #include<stdio.h>
 #include<string.h>
 
-#include "read_config.h"
-
 typedef struct SERVER_CONF{
 	int PORT;
 	int NUM_THREADS;
@@ -11,7 +9,6 @@ typedef struct SERVER_CONF{
 	int NUM_FILES;
 }SERVER_CONF;
 
-extern SERVER_CONF S1;
 
 
 void read_conf(SERVER_CONF *S1)

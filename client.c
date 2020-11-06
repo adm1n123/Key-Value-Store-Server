@@ -5,7 +5,8 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <unistd.h>
-#include "deocde-encode.h"
+#include "decode-encode.c"
+
 int main(int argc, char** argv)
 {
 	int s;
@@ -15,18 +16,14 @@ int main(int argc, char** argv)
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
-	//char* status_code=argv[1];
-	//char* key=argv[2];
-	//char* value=argv[3];
-	//printf("%ld",strlen(encode(status_code,key,value)));
 	s = getaddrinfo(NULL, "8080", &hints, &result);
 	connect(sock_fd, result->ai_addr, result->ai_addrlen);
 
-	char buffer[513];
-	while(fgets(buffer, 513, stdin) != NULL){
-		//printf("SENDING: %s", buffer);
-		//printf("===\n");
-		
+	char buffer[520];
+	char response[513];
+	FILE *file;
+	file=fopen("testcases.txt","r");
+	while(fgets(buffer, 520, file) != NULL){
         char *split = strtok(buffer," ");
 		char *status_code=split;
 		split=strtok(NULL," ");
@@ -35,7 +32,6 @@ int main(int argc, char** argv)
 		char *value=NULL;
 		if(split!=NULL)
 		{
-		//split=strtok(NULL," ");
 		value=split;
 		value[strlen(value)-1]='\0';
 		}
@@ -43,28 +39,36 @@ int main(int argc, char** argv)
 		{
 			key[strlen(key)-1]='\0';
 		}
-		
-		
 		//printf("%s\n",status_code);
-		//printf("%s\n",key);
-		//if(value!=NULL)
-		//printf("%s\n",value);
-		//char *en_mess=encode(status_code,key,value);
-		//for(int i=0;i<=512;i++)
-		//	printf("%c",en_mess[i]);
-		//char *split1=encode(status_code,key,value);
-
-		//decoded_message dec_mess;
-		//decode(encode(status_code,key,value),&dec_mess);
-		//printf("%s\n",dec_mess.key);
-		//if(dec_mess.value[0]!='\0')
-		//printf("%s\n",dec_mess.value);
-		//printf("%d\n",dec_mess.status_code);
 		write(sock_fd, encode(status_code,key,value),513);
-		//char resp[1000];
-		//int len = read(sock_fd, resp, 999);
-		//resp[len] = '\0';
-		//printf("%s\n", resp);
+		//printf("below write\n");
+		bzero(response, sizeof(response));
+		read(sock_fd,response, sizeof(response));
+		decoded_message dec_res;
+		decode(response,&dec_res); 
+		//printf("%s\n",dec_res.key);
+		//printf("%s\n",dec_res.value);
+		if(dec_res.status_code==240)
+		{
+			printf("ERROR\n");
+		}
+		else if(dec_res.status_code==200)
+		{
+			if(strcmp(status_code,"1")==0)
+			{
+				printf("GET %s\n",dec_res.value);
+			}
+			else if(strcmp(status_code,"2")==0)
+			{
+				printf("PUT\n");
+			}
+			else if(strcmp(status_code,"3")==0)
+			{
+				printf("DEL\n");
+			}
+		}
+		//printf("%d\n",dec_res.status_code);
+
 	}
     	return 0;
 }
