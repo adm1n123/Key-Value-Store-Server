@@ -9,7 +9,7 @@
 #include <sys/epoll.h>
 #include <pthread.h>
 #include "read_config.c"
-#include "deocde-encode.h"
+#include "decode-encode.c"
 #include "kv_cache.c"
 
 SERVER_CONF S;
@@ -31,7 +31,7 @@ void *monitor(void *Id)
     while (1)
     {
         int n, i;
-        n = epoll_wait (epoll_data[*worker_id].efd, epoll_data[*worker_id].events, 64, -1);
+        n = epoll_wait (epoll_data[*worker_id].efd, epoll_data[*worker_id].events, 10000, -1);
         //printf("checkpoint\n");
         for (i = 0; i < n; i++)
         {
@@ -49,12 +49,13 @@ void *monitor(void *Id)
                 }
                 decoded_message dec_mess;
                 decode(buf,&dec_mess);
-                printf("%s\n",buf);
+                //printf("%s\n",buf);
 
-                int request = buf[0];
+                int request = buf[0]-48;
+                //printf("%d\n",request);
                 int status;
                 struct kv pair;
-                memcopy(&pair, &(buf[1]), MAX_KEY_LEN + MAX_VAL_LEN);
+                memcpy(&pair, &(buf[1]), MAX_KEY_LEN + MAX_VAL_LEN);
 
                 switch(request){
                 	case 1: status = get(&pair);
@@ -65,9 +66,15 @@ void *monitor(void *Id)
                 		break;
                 	default: status = ERROR;
                 }
-                //printf("%d\n",dec_mess.status_code);
-                //printf("%s\n",dec_mess.key);
-                //printf("%s\n",dec_mess.value);
+                //printf("%d\n",status);
+                char response[513]={'\0'};
+                response[0]=status;
+                //strcpy(response,(char)status);
+                strcat(response,pair.key);
+                strcat(response+257,pair.val);
+                write(epoll_data[*worker_id].events[i].data.fd,response,sizeof(response));
+                //printf("%s\n",pair.key);
+                //printf("%s\n",pair.val);
             }
         }
     }
@@ -99,9 +106,9 @@ int main(int argc, char** argv)
 {   
     read_conf(&S);
     //printf("%d %d",S.port,S.num_threads);
-	kv_cache_init(S->CACHE_SIZE, S->POLICY);
-    pthread_t workers[S.num_threads];
-    epoll_data=(epoll_context *)malloc(S.num_threads*sizeof(epoll_context));
+	  kv_cache_init(S.CACHE_SIZE, S.POLICY);
+    pthread_t workers[S.NUM_THREADS];
+    epoll_data=(epoll_context *)malloc(S.NUM_THREADS*sizeof(epoll_context));
     int s,opt=1;
     sfd=socket(AF_INET,SOCK_STREAM,0);
     if(sfd==-1)
@@ -117,7 +124,7 @@ int main(int argc, char** argv)
     } 
     address.sin_family = AF_INET; 
     address.sin_addr.s_addr = INADDR_ANY; 
-    address.sin_port = htons( S.port ); 
+    address.sin_port = htons( S.PORT ); 
     make_non_block(sfd);    
     if (bind(sfd, (struct sockaddr *)&address,sizeof(address))<0) 
     { 
@@ -133,7 +140,7 @@ int main(int argc, char** argv)
 	}
     
     //printf("checkpoint\n");
-    for(int i=0;i<S.num_threads;i++)
+    for(int i=0;i<S.NUM_THREADS;i++)
     {
         epoll_data[i].efd=epoll_create1(0);
         epoll_data[i].event.data.fd=sfd;
@@ -142,7 +149,7 @@ int main(int argc, char** argv)
         epoll_data[i].events=calloc(64,sizeof(epoll_data[i].event));
     }
 
-    for(int i=0;i<S.num_threads;i++)
+    for(int i=0;i<S.NUM_THREADS;i++)
     {
       int *arg = malloc(sizeof(*arg));
     	*arg=i;
@@ -188,7 +195,7 @@ int main(int argc, char** argv)
           epoll_data[turn].event.data.fd = infd;
           epoll_data[turn].event.events = EPOLLIN | EPOLLET;
           epoll_ctl (epoll_data[turn].efd, EPOLL_CTL_ADD, infd, &epoll_data[turn].event);
-          turn = (turn+1)%S.num_threads;
+          turn = (turn+1)%S.NUM_THREADS;
 
         }
       }  

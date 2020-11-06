@@ -64,7 +64,7 @@ typedef struct decoded_message
 
 void decode(char message[513],decoded_message *dec_mess)
 {
-    dec_mess->status_code=message[0];
+    dec_mess->status_code=(message[0]+256)%256;
     dec_mess->key[0]='\0';
     dec_mess->value[0]='\0';
     for(int i=1;i<=256;i++)

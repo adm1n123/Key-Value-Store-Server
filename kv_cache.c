@@ -163,9 +163,9 @@ void set_kv_pair(struct kv *from, struct kv *to) {
 
 void write_back_dirty(int index) {
 	if(cache[index]->state == VALID && cache[index]->status == MODIFIED) {
-		printf("Writing back dirty: key: %s, value: %s\n", cache[index]->kv_pair->key, cache[index]->kv_pair->val);
+		//printf("Writing back dirty: key: %s, value: %s\n", cache[index]->kv_pair->key, cache[index]->kv_pair->val);
 		int status = kv_write(cache[index]->kv_pair);
-		printf("Status code: %d\n", status);
+		//printf("Status code: %d\n", status);
 	}
 }
 
